@@ -1,8 +1,33 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TodoProvider } from '../contexts/TodoContext';
+import { ToastProvider } from '../contexts/ToastContext';
 import { useTodo } from '../hooks/useTodo';
+import { vi, beforeEach } from 'vitest';
 // import { act } from 'react-dom/test-utils';
+
+// Mock sessionStorage
+const mockSessionStorage = (() => {
+  let store: Record<string, string> = {};
+
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value;
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+// Replace global sessionStorage with mock
+Object.defineProperty(window, 'sessionStorage', {
+  value: mockSessionStorage,
+});
 
 const TestComponent = () => {
   const { todos, addTodo, toggleTodoCompletion, deleteTodo } = useTodo();
@@ -11,6 +36,12 @@ const TestComponent = () => {
     <div>
       <button data-testid="add-todo" onClick={() => addTodo('Test Todo', 'Test Description')}>
         Add Todo
+      </button>
+      <button
+        data-testid="add-todo-with-date"
+        onClick={() => addTodo('Todo with Date', 'Test Description', '2024-12-31T00:00:00.000Z')}
+      >
+        Add Todo with Date
       </button>
       <div data-testid="todo-count">{todos.length}</div>
       {todos.map(todo => (
@@ -32,13 +63,22 @@ const TestComponent = () => {
   );
 };
 
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <ToastProvider>
+      <TodoProvider>{component}</TodoProvider>
+    </ToastProvider>
+  );
+};
+
 describe('TodoContext', () => {
+  beforeEach(() => {
+    mockSessionStorage.clear();
+    vi.clearAllMocks();
+  });
+
   it('provides empty todos array initially', () => {
-    render(
-      <TodoProvider>
-        <TestComponent />
-      </TodoProvider>
-    );
+    renderWithProviders(<TestComponent />);
 
     expect(screen.getByTestId('todo-count').textContent).toBe('0');
   });
@@ -46,11 +86,7 @@ describe('TodoContext', () => {
   it('can add a new todo', async () => {
     const user = userEvent.setup();
 
-    render(
-      <TodoProvider>
-        <TestComponent />
-      </TodoProvider>
-    );
+    renderWithProviders(<TestComponent />);
 
     await user.click(screen.getByTestId('add-todo'));
 
@@ -62,11 +98,7 @@ describe('TodoContext', () => {
   it('can toggle todo completion status', async () => {
     const user = userEvent.setup();
 
-    render(
-      <TodoProvider>
-        <TestComponent />
-      </TodoProvider>
-    );
+    renderWithProviders(<TestComponent />);
 
     await user.click(screen.getByTestId('add-todo'));
 
@@ -89,11 +121,7 @@ describe('TodoContext', () => {
   it('can delete a todo', async () => {
     const user = userEvent.setup();
 
-    render(
-      <TodoProvider>
-        <TestComponent />
-      </TodoProvider>
-    );
+    renderWithProviders(<TestComponent />);
 
     await user.click(screen.getByTestId('add-todo'));
 
@@ -111,5 +139,62 @@ describe('TodoContext', () => {
     await user.click(screen.getByTestId(`delete-${todoId}`));
 
     expect(screen.getByTestId('todo-count').textContent).toBe('0');
+  });
+
+  it('can add a todo with due date', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<TestComponent />);
+
+    await user.click(screen.getByTestId('add-todo-with-date'));
+
+    expect(screen.getByTestId('todo-count').textContent).toBe('1');
+    expect(screen.getByText('Todo with Date')).toBeInTheDocument();
+    expect(screen.getByText('Test Description')).toBeInTheDocument();
+  });
+
+  it('hydrates todos from sessionStorage on mount', () => {
+    const storedTodos = [
+      {
+        id: '1',
+        title: 'Stored Todo',
+        description: 'Stored Description',
+        completed: false,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    ];
+
+    mockSessionStorage.getItem.mockReturnValue(JSON.stringify(storedTodos));
+
+    renderWithProviders(<TestComponent />);
+
+    expect(screen.getByTestId('todo-count').textContent).toBe('1');
+    expect(screen.getByText('Stored Todo')).toBeInTheDocument();
+    expect(screen.getByText('Stored Description')).toBeInTheDocument();
+  });
+
+  it('persists todos to sessionStorage when state changes', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<TestComponent />);
+
+    await user.click(screen.getByTestId('add-todo'));
+
+    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+      'todos',
+      expect.stringContaining('Test Todo')
+    );
+  });
+
+  it('handles corrupt sessionStorage data gracefully', () => {
+    mockSessionStorage.getItem.mockReturnValue('invalid json');
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    renderWithProviders(<TestComponent />);
+
+    expect(screen.getByTestId('todo-count').textContent).toBe('0');
+    expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('todos');
+
+    consoleSpy.mockRestore();
   });
 });

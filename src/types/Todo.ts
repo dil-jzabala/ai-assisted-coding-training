@@ -4,4 +4,5 @@ export interface Todo {
   description: string;
   completed: boolean;
   createdAt: Date;
+  dueDate?: string; // ISO 8601 format for storage compatibility
 }

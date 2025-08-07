@@ -1,5 +1,14 @@
 import React from 'react';
-import { ListItem, ListItemText, IconButton, Checkbox, Divider, Typography } from '@mui/material';
+import {
+  ListItem,
+  ListItemText,
+  IconButton,
+  Checkbox,
+  Divider,
+  Typography,
+  Box,
+} from '@mui/material';
+import { format, isBefore, startOfDay } from 'date-fns';
 import type { Todo } from '../../types/Todo';
 import { useTodo } from '../../hooks/useTodo';
 
@@ -10,6 +19,7 @@ interface TodoItemProps {
 
 export const TodoItem: React.FC<TodoItemProps> = ({ todo, onEditClick }) => {
   const { toggleTodoCompletion, deleteTodo } = useTodo();
+  const isOverdue = todo.dueDate && isBefore(new Date(todo.dueDate), startOfDay(new Date()));
 
   return (
     <>
@@ -50,16 +60,27 @@ export const TodoItem: React.FC<TodoItemProps> = ({ todo, onEditClick }) => {
         <ListItemText
           disableTypography
           primary={
-            <Typography
-              variant="body1"
-              sx={{
-                textDecoration: todo.completed ? 'line-through' : 'none',
-                color: todo.completed ? 'text.secondary' : 'text.primary',
-                fontWeight: 500,
-              }}
-            >
-              {todo.title}
-            </Typography>
+            <Box>
+              <Typography
+                variant="body1"
+                sx={{
+                  textDecoration: todo.completed ? 'line-through' : 'none',
+                  color: todo.completed ? 'text.secondary' : 'text.primary',
+                  fontWeight: 500,
+                }}
+              >
+                {todo.title}
+              </Typography>
+              {todo.dueDate && (
+                <Typography
+                  variant="body2"
+                  color={isOverdue ? 'error.main' : 'text.secondary'}
+                  sx={{ mt: 0.5 }}
+                >
+                  Due: {format(new Date(todo.dueDate), 'PP')}
+                </Typography>
+              )}
+            </Box>
           }
           secondary={
             <Typography
