@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Todo } from '../types/Todo';
 import { v4 as uuidv4 } from 'uuid';
 import { TodoContext } from './TodoContextType';
@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const { showToast } = useToast();
+  const isInitialRender = useRef(true);
 
   // Hydrate todos from sessionStorage on mount
   useEffect(() => {
@@ -19,6 +20,12 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Persist todos to sessionStorage whenever todos change
   useEffect(() => {
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      // Skip saving on initial render if todos is empty
+      if (todos.length === 0) return;
+    }
+
     const result = saveTodos(todos);
     if (!result.success && result.error) {
       showToast(result.error, 'warning');
