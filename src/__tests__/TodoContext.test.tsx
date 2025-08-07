@@ -37,6 +37,12 @@ const TestComponent = () => {
       <button data-testid="add-todo" onClick={() => addTodo('Test Todo', 'Test Description')}>
         Add Todo
       </button>
+      <button
+        data-testid="add-todo-with-date"
+        onClick={() => addTodo('Todo with Date', 'Test Description', '2024-12-31T00:00:00.000Z')}
+      >
+        Add Todo with Date
+      </button>
       <div data-testid="todo-count">{todos.length}</div>
       {todos.map(todo => (
         <div key={todo.id} data-testid={`todo-item-${todo.id}`}>
@@ -133,6 +139,18 @@ describe('TodoContext', () => {
     await user.click(screen.getByTestId(`delete-${todoId}`));
 
     expect(screen.getByTestId('todo-count').textContent).toBe('0');
+  });
+
+  it('can add a todo with due date', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<TestComponent />);
+
+    await user.click(screen.getByTestId('add-todo-with-date'));
+
+    expect(screen.getByTestId('todo-count').textContent).toBe('1');
+    expect(screen.getByText('Todo with Date')).toBeInTheDocument();
+    expect(screen.getByText('Test Description')).toBeInTheDocument();
   });
 
   it('hydrates todos from sessionStorage on mount', () => {

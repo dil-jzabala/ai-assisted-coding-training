@@ -10,6 +10,7 @@ import {
   FormControlLabel,
   Checkbox,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useTodo } from '../../hooks/useTodo';
 // Todo type is used in the context, no need to import it directly here
 
@@ -22,6 +23,7 @@ interface TodoModalProps {
     title: string;
     description: string;
     completed: boolean;
+    dueDate?: string;
   };
 }
 
@@ -35,7 +37,9 @@ export const TodoModal: React.FC<TodoModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [completed, setCompleted] = useState(false);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
   const [titleError, setTitleError] = useState('');
+  const [dueDateError, setDueDateError] = useState('');
 
   // Reset form or load values when modal opens
   useEffect(() => {
@@ -44,21 +48,36 @@ export const TodoModal: React.FC<TodoModalProps> = ({
         setTitle(initialValues.title);
         setDescription(initialValues.description);
         setCompleted(initialValues.completed);
+        setDueDate(initialValues.dueDate ? new Date(initialValues.dueDate) : null);
       } else {
         setTitle('');
         setDescription('');
         setCompleted(false);
+        setDueDate(null);
       }
       setTitleError('');
+      setDueDateError('');
     }
   }, [isOpen, mode, initialValues]);
 
   const validateForm = () => {
+    let isValid = true;
+
+    // Title validation
     if (!title.trim()) {
       setTitleError('Title is required');
-      return false;
+      isValid = false;
     }
-    return true;
+
+    // Basic date validation
+    if (dueDate && isNaN(dueDate.getTime())) {
+      setDueDateError('Please enter a valid date');
+      isValid = false;
+    } else {
+      setDueDateError('');
+    }
+
+    return isValid;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -66,13 +85,16 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
     if (!validateForm()) return;
 
+    const dueDateISO = dueDate ? dueDate.toISOString() : undefined;
+
     if (mode === 'create') {
-      addTodo(title.trim(), description.trim());
+      addTodo(title.trim(), description.trim(), dueDateISO);
     } else if (mode === 'edit' && initialValues) {
       editTodo(initialValues.id, {
         title: title.trim(),
         description: description.trim(),
         completed,
+        dueDate: dueDateISO,
       });
     }
     onClose();
@@ -120,6 +142,24 @@ export const TodoModal: React.FC<TodoModalProps> = ({
                   'data-testid': 'description-input',
                 } as React.InputHTMLAttributes<HTMLInputElement>
               }
+            />
+            <DatePicker
+              label="Due Date"
+              value={dueDate}
+              onChange={newValue => {
+                setDueDate(newValue);
+                if (dueDateError && newValue && !isNaN(newValue.getTime())) {
+                  setDueDateError('');
+                }
+              }}
+              slotProps={{
+                textField: {
+                  fullWidth: true,
+                  margin: 'normal',
+                  error: !!dueDateError,
+                  helperText: dueDateError,
+                },
+              }}
             />
             {mode === 'edit' && (
               <FormControlLabel

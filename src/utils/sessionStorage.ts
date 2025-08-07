@@ -17,7 +17,8 @@ function isValidTodo(obj: unknown): obj is Todo {
     typeof todo.title === 'string' &&
     typeof todo.description === 'string' &&
     typeof todo.completed === 'boolean' &&
-    (todo.createdAt instanceof Date || typeof todo.createdAt === 'string')
+    (todo.createdAt instanceof Date || typeof todo.createdAt === 'string') &&
+    (todo.dueDate === undefined || typeof todo.dueDate === 'string') // Optional dueDate validation
   );
 }
 
@@ -56,6 +57,7 @@ export function loadTodos(): Todo[] {
     return parsed.map(todo => ({
       ...todo,
       createdAt: typeof todo.createdAt === 'string' ? new Date(todo.createdAt) : todo.createdAt,
+      dueDate: todo.dueDate || undefined, // Ensure undefined for missing dueDate
     }));
   } catch (error) {
     console.warn('Failed to load todos from sessionStorage:', error);

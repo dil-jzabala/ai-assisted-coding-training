@@ -32,13 +32,14 @@ export const TodoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [todos, showToast]);
 
-  const addTodo = (title: string, description: string) => {
+  const addTodo = (title: string, description: string, dueDate?: string) => {
     const newTodo: Todo = {
       id: uuidv4(),
       title,
       description,
       completed: false,
       createdAt: new Date(),
+      dueDate, // Include optional dueDate
     };
     setTodos([...todos, newTodo]);
   };

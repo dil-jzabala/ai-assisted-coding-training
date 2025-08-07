@@ -83,6 +83,16 @@ describe('sessionStorage utils', () => {
       expect(isValidTodos(todosWithDate)).toBe(true);
       expect(isValidTodos(todosWithString)).toBe(true);
     });
+
+    it('returns true for todos with optional dueDate', () => {
+      const todosWithDueDate = [{ ...mockTodo, dueDate: '2024-12-31T00:00:00.000Z' }];
+      const todosWithoutDueDate = [mockTodo]; // No dueDate field
+      const todosWithUndefinedDueDate = [{ ...mockTodo, dueDate: undefined }];
+
+      expect(isValidTodos(todosWithDueDate)).toBe(true);
+      expect(isValidTodos(todosWithoutDueDate)).toBe(true);
+      expect(isValidTodos(todosWithUndefinedDueDate)).toBe(true);
+    });
   });
 
   describe('loadTodos', () => {
