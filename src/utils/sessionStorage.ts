@@ -57,7 +57,7 @@ export function loadTodos(): Todo[] {
     return parsed.map(todo => ({
       ...todo,
       createdAt: typeof todo.createdAt === 'string' ? new Date(todo.createdAt) : todo.createdAt,
-      dueDate: todo.dueDate || undefined, // Ensure undefined for missing dueDate
+      dueDate: todo.dueDate, // Ensure undefined for missing dueDate
     }));
   } catch (error) {
     console.warn('Failed to load todos from sessionStorage:', error);
